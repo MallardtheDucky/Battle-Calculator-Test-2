@@ -3,11 +3,9 @@ import { createCommander, TRAIT_LIBRARY } from "./commanders.js";
 import {
   getRoomId, setRoomId, clearRoomId, readCache,
   readLocalOnly, writeLocalOnly, createRoom, pullRoom, pushRoom,
+  SESSION_KEY, resetAllLocalData,
 } from "./sync.js";
 
-// ---------------------------------------------------------------------
-// Small helpers
-// ---------------------------------------------------------------------
 function escapeAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 function escapeHtml(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function slugify(s) { return (s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")) || "unit"; }
@@ -22,13 +20,12 @@ function hashStringToInt(str) {
   return h >>> 0;
 }
 
-// ---------------------------------------------------------------------
-// Global app state (not the battle engine's internal state - this is
-// just what the UI has typed in). unitTypes and presets are the parts
-// that sync across devices via a shared room; everything else (the two
-// armies/commanders currently being edited, the battlefield setup, the
-// in-progress battle) stays local to this browser tab.
-// ---------------------------------------------------------------------
+// Global app state (not the battle engine's internal state - this is just
+// what the UI has typed in). unitTypes and presets are the parts that sync
+// across devices via a shared room; everything else (the two armies/
+// commanders currently being edited, the battlefield setup, which tab is
+// open) is saved to this browser's localStorage instead (see saveSession
+// below), so a reload comes back to where you left off.
 const appState = {
   unitTypes: cloneUnitTypes(DEFAULT_UNIT_TYPES),
   armies: { A: defaultArmy("Army A"), B: defaultArmy("Army B") },
@@ -54,24 +51,63 @@ function defaultArmy(name) {
   };
 }
 
-// ---------------------------------------------------------------------
-// Tabs (Calculator/Debug used to be staff-gated behind a Discord-role
-// passcode; that gate has been removed for now - every tab is open.)
-// ---------------------------------------------------------------------
+// Local session snapshot: which tab is open, both armies/commanders, and
+// the battlefield setup. Restored on load so a page refresh doesn't lose
+// in-progress work. Saved (debounced) on any input/change/click anywhere
+// in the app - see scheduleSessionSave below.
+let activeTabId = "armies";
+
+function loadSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    if (!saved) return;
+    if (saved.armies) appState.armies = saved.armies;
+    if (saved.commanders) appState.commanders = saved.commanders;
+    if (saved.battlefield) appState.battlefield = saved.battlefield;
+    if (saved.attackerSide) appState.attackerSide = saved.attackerSide;
+    if (saved.activeTab) activeTabId = saved.activeTab;
+  } catch {
+    /* corrupt or unavailable - just start fresh */
+  }
+}
+loadSession();
+
+let sessionSaveTimer = null;
+let resetting = false;
+function scheduleSessionSave() {
+  if (resetting) return;
+  clearTimeout(sessionSaveTimer);
+  sessionSaveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        activeTab: activeTabId,
+        armies: appState.armies,
+        commanders: appState.commanders,
+        battlefield: appState.battlefield,
+        attackerSide: appState.attackerSide,
+      }));
+    } catch {}
+  }, 400);
+}
+document.addEventListener("input", scheduleSessionSave);
+document.addEventListener("change", scheduleSessionSave);
+document.addEventListener("click", scheduleSessionSave);
+
+// Calculator/Debug used to be staff-gated behind a Discord-role passcode;
+// that gate has been removed for now - every tab is open.
 document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => activateTab(btn.dataset.tab));
 });
 
 function activateTab(tab) {
+  activeTabId = tab;
   document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === `tab-${tab}`));
 }
 
-// ---------------------------------------------------------------------
 // Registries of per-side render callbacks, so a sync pull or a unit-type
 // edit can refresh just the bits of the DOM that depend on it instead of
 // tearing down the whole page.
-// ---------------------------------------------------------------------
 const presetSelectRefreshers = {};
 const commandSummaryUpdaters = {};
 
@@ -90,9 +126,6 @@ function refreshAllCommandSummaries() {
   Object.values(commandSummaryUpdaters).forEach((fn) => fn && fn());
 }
 
-// ---------------------------------------------------------------------
-// Regiments
-// ---------------------------------------------------------------------
 function buildRegimentRow(side, rgt, renderRegiments) {
   const row = document.createElement("div");
   row.className = "regiment-row";
@@ -126,9 +159,6 @@ function buildRegimentRow(side, rgt, renderRegiments) {
   return row;
 }
 
-// ---------------------------------------------------------------------
-// Army forms
-// ---------------------------------------------------------------------
 function buildArmyForm(side) {
   const tpl = document.getElementById("armyFormTemplate").content.cloneNode(true);
   const root = tpl.querySelector(".army-form");
@@ -149,7 +179,7 @@ function buildArmyForm(side) {
     const over = activeRegiments > limit;
     commandSummaryEl.innerHTML = `${activeRegiments} regiment${activeRegiments === 1 ? "" : "s"} · ${total.toLocaleString()} troops` +
       (over
-        ? ` — <span class="warn">over ${escapeHtml(cmd?.name || "commander")}'s command limit of ${limit}; coordination penalty in battle</span>`
+        ? ` - <span class="warn">over ${escapeHtml(cmd?.name || "commander")}'s command limit of ${limit}; coordination penalty in battle</span>`
         : ` · within command limit of ${limit}`);
   }
   commandSummaryUpdaters[side] = updateCommandSummary;
@@ -249,9 +279,6 @@ function rebuildSideForms(side) {
 document.getElementById("armyFormA").appendChild(buildArmyForm("A"));
 document.getElementById("armyFormB").appendChild(buildArmyForm("B"));
 
-// ---------------------------------------------------------------------
-// Commander forms
-// ---------------------------------------------------------------------
 const STAT_FIELDS = [
   ["martial", "Martial Skill"], ["leadership", "Leadership"], ["tactics", "Tactical Ability"],
   ["strategy", "Strategic Ability"], ["aggression", "Aggression"], ["caution", "Caution"],
@@ -315,10 +342,8 @@ function buildCommanderForm(side) {
 document.getElementById("commanderFormA").appendChild(buildCommanderForm("A"));
 document.getElementById("commanderFormB").appendChild(buildCommanderForm("B"));
 
-// ---------------------------------------------------------------------
 // Unit Types tab - every stat here is editable, defaults included, and
 // custom types can be added/removed. Edits sync to the shared room.
-// ---------------------------------------------------------------------
 const UNIT_STAT_FIELDS = [
   ["melee", "Melee"], ["ranged", "Ranged"], ["charge", "Charge"], ["defense", "Defense"],
   ["armor", "Armor"], ["speed", "Speed"], ["cavVuln", "Cavalry Vuln."],
@@ -398,10 +423,8 @@ document.getElementById("addUnitTypeBtn").addEventListener("click", () => {
   refreshAllUnitTypeSelects();
 });
 
-// ---------------------------------------------------------------------
 // Shared sync (jsonblob-backed room). See js/sync.js for the storage
 // details; this section just wires it into the UI and the status bar.
-// ---------------------------------------------------------------------
 const syncStatusText = document.getElementById("syncStatusText");
 const roomCodeInput = document.getElementById("roomCodeInput");
 const joinRoomBtn = document.getElementById("joinRoomBtn");
@@ -497,7 +520,7 @@ createRoomBtn.addEventListener("click", async () => {
     const id = await createRoom(payload);
     appState.roomId = id;
     refreshSyncControls();
-    setSyncStatus(`Shared room created: ${id} — give this code to your players so everyone stays in sync.`, "synced");
+    setSyncStatus(`Shared room created: ${id} - give this code to your players so everyone stays in sync.`, "synced");
   } catch (err) {
     setSyncStatus(`Could not create a shared room (${err.message}).`, "error");
   }
@@ -512,9 +535,6 @@ leaveRoomBtn.addEventListener("click", () => {
 
 initSync();
 
-// ---------------------------------------------------------------------
-// Battlefield setup
-// ---------------------------------------------------------------------
 const terrainSelect = document.getElementById("terrainSelect");
 Object.entries(TERRAIN).forEach(([key, def]) => {
   const opt = document.createElement("option"); opt.value = key; opt.textContent = def.label;
@@ -547,10 +567,8 @@ document.getElementById("seedInput").addEventListener("input", (e) => {
 
 document.getElementById("goToBattleBtn").addEventListener("click", () => activateTab("battle"));
 
-// ---------------------------------------------------------------------
-// Battle playback (text-only: turn header, per-side stat/regiment
-// blocks, and a narrated event log - no animated battlefield graphics)
-// ---------------------------------------------------------------------
+// Battle playback (text-only: turn header, per-side stat/regiment blocks,
+// and a narrated event log - no animated battlefield graphics)
 const startBtn = document.getElementById("startBattleBtn");
 const nextBtn = document.getElementById("nextTurnBtn");
 const playBtn = document.getElementById("playBtn");
@@ -711,11 +729,9 @@ function reportSide(s) {
   </div>`;
 }
 
-// ---------------------------------------------------------------------
-// Calculator mode (staff) - raw numeric breakdown per turn: troop state,
-// this-turn casualties by kind, melee/ranged/charge/defense power, and
-// flank/breakthrough rolls, so a fight can be adjudicated by hand.
-// ---------------------------------------------------------------------
+// Calculator mode - raw numeric breakdown per turn: troop state, this-turn
+// casualties by kind, melee/ranged/charge/defense power, and flank/
+// breakthrough rolls, so a fight can be adjudicated by hand.
 function casLine(cas) {
   if (!cas) return "n/a";
   return `killed=${cas.killed} wounded=${cas.wounded} captured=${cas.captured}`;
@@ -751,9 +767,7 @@ function renderCalculator() {
   }).join("\n\n") + `\n\nSeed: ${appState.result.seed}\nOutcome: ${appState.result.outcome}\nMain Battle turns: ${appState.result.report.mainBattleTurns}`;
 }
 
-// ---------------------------------------------------------------------
-// Debug mode (staff) - full raw JSON + Discord export
-// ---------------------------------------------------------------------
+// Debug mode - full raw JSON + Discord export
 function renderDebug() {
   const out = document.getElementById("debugOutput");
   out.textContent = appState.result ? JSON.stringify(appState.result, null, 2) : "No battle run yet.";
@@ -776,3 +790,22 @@ document.getElementById("copyDiscordBtn").addEventListener("click", () => {
     `Initial: ${r.defender.initial} | Killed: ${r.defender.killed} | Wounded: ${r.defender.wounded} | Captured: ${r.defender.captured} | Routed: ${r.defender.routed} | Remaining: ${r.defender.remaining}\n`;
   navigator.clipboard?.writeText(text);
 });
+
+// Reset Everything: wipes all local storage this app uses and reloads, so
+// the person comes back to a completely clean slate (fresh armies/
+// commanders/battlefield, no room joined, no cached roster). Does not
+// touch the shared room's copy on jsonblob.com - other players stay synced.
+document.getElementById("resetEverythingBtn").addEventListener("click", () => {
+  const ok = confirm(
+    "Reset everything?\n\nThis clears both armies, both commanders, the battlefield setup, and leaves your shared room on this device. It does not delete the shared roster from other players' devices. This cannot be undone."
+  );
+  if (!ok) return;
+  resetting = true;
+  clearTimeout(sessionSaveTimer);
+  clearRoomId();
+  resetAllLocalData();
+  location.reload();
+});
+
+// Restore whichever tab was open before the last reload.
+activateTab(activeTabId);

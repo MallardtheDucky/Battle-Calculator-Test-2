@@ -553,7 +553,7 @@ export function simulate(attackerIn, defenderIn, battlefield, options = {}) {
     }));
   }
 
-  // --- Retreat / Rout resolution -------------------------------------
+  // Retreat / Rout resolution
   let loser = null, winner = null;
   if (attacker.status === "routing" && defender.status === "routing") {
     loser = rng() < 0.5 ? attacker : defender;

@@ -42,12 +42,6 @@ body {
   color: var(--parchment);
 }
 .glyph { color: var(--bronze); }
-.tagline {
-  color: var(--parchment-dim);
-  font-style: italic;
-  margin: 0 0 1rem;
-  font-size: 0.9rem;
-}
 
 .tabs {
   display: flex;
@@ -69,9 +63,7 @@ body {
 .tab-btn.active { color: var(--parchment); border-color: var(--bronze); background: #2c2620; }
 .hidden { display: none !important; }
 
-/* -------------------------------------------------------------------- */
-/* Sync bar - shared room controls, always visible under the header     */
-/* -------------------------------------------------------------------- */
+/* Sync bar - shared room controls, always visible under the header */
 .sync-bar {
   display: flex;
   flex-wrap: wrap;
@@ -101,6 +93,7 @@ body {
   width: 10rem;
 }
 .sync-bar button { padding: 0.35rem 0.6rem; font-size: 0.78rem; }
+.sync-bar button.danger { margin-left: 0.5rem; }
 
 main { max-width: 900px; margin: 0 auto; padding: 1rem; }
 
@@ -145,9 +138,7 @@ main { max-width: 900px; margin: 0 auto; padding: 1rem; }
   width: 55%;
 }
 
-/* -------------------------------------------------------------------- */
-/* Regiments                                                            */
-/* -------------------------------------------------------------------- */
+/* Regiments */
 .regiment-rows-head {
   display: none;
   grid-template-columns: 1.3fr 1.3fr 90px 1.1fr 28px;
@@ -216,9 +207,7 @@ main { max-width: 900px; margin: 0 auto; padding: 1rem; }
   font-family: var(--serif);
 }
 
-/* -------------------------------------------------------------------- */
-/* Unit Types editor                                                    */
-/* -------------------------------------------------------------------- */
+/* Unit Types editor */
 .unittype-list { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.75rem; }
 .unittype-row { border: 1px solid var(--iron); border-radius: var(--radius); padding: 0.6rem; }
 .unittype-head {
@@ -327,6 +316,11 @@ button.primary {
   border-color: var(--bronze);
   color: #1a1410;
   font-weight: 600;
+}
+button.danger {
+  background: var(--blood);
+  border-color: var(--blood);
+  color: var(--parchment);
 }
 
 .stat-grid {
