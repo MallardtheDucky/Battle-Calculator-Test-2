@@ -1,0 +1,435 @@
+:root {
+  --ink-black: #0f0d0a;
+  --field-dark: #1c1812;
+  --panel: #24201a;
+  --parchment: #e8dcc0;
+  --parchment-dim: #b8ac8e;
+  --iron: #4a4640;
+  --bronze: #a6621f;
+  --blood: #8b3a3a;
+  --hold-green: #6f9a5c;
+  --shaken-amber: #c8922f;
+  --rout-red: #b0453a;
+  --radius: 3px;
+  --serif: 'Spectral', Georgia, serif;
+  --display: 'Cinzel', var(--serif);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ink-black);
+  background-image:
+    radial-gradient(ellipse at top, rgba(166,98,31,0.06), transparent 60%);
+  color: var(--parchment);
+  font-family: var(--serif);
+  line-height: 1.5;
+  padding-bottom: 3rem;
+}
+
+.site-header {
+  padding: 1.5rem 1rem 0.5rem;
+  border-bottom: 1px solid var(--iron);
+  text-align: center;
+}
+.site-header h1 {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-size: clamp(1.5rem, 5vw, 2.1rem);
+  margin: 0 0 0.2rem;
+  color: var(--parchment);
+}
+.glyph { color: var(--bronze); }
+.tagline {
+  color: var(--parchment-dim);
+  font-style: italic;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+.tab-btn {
+  background: var(--panel);
+  border: 1px solid var(--iron);
+  color: var(--parchment-dim);
+  padding: 0.5rem 0.9rem;
+  font-family: var(--serif);
+  font-size: 0.85rem;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.tab-btn.active { color: var(--parchment); border-color: var(--bronze); background: #2c2620; }
+.hidden { display: none !important; }
+
+/* -------------------------------------------------------------------- */
+/* Sync bar - shared room controls, always visible under the header     */
+/* -------------------------------------------------------------------- */
+.sync-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  max-width: 900px;
+  margin: 0.75rem auto 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--iron);
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+}
+.sync-status { flex: 1 1 100%; text-align: center; color: var(--parchment-dim); }
+.sync-status.synced { color: var(--hold-green); }
+.sync-status.loading { color: var(--shaken-amber); }
+.sync-status.error { color: var(--rout-red); }
+.sync-status.local { color: var(--parchment-dim); }
+.sync-bar input[type="text"] {
+  background: var(--field-dark);
+  border: 1px solid var(--iron);
+  color: var(--parchment);
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  width: 10rem;
+}
+.sync-bar button { padding: 0.35rem 0.6rem; font-size: 0.78rem; }
+
+main { max-width: 900px; margin: 0 auto; padding: 1rem; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.tab-intro { margin-bottom: 0.75rem; }
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 720px) {
+  .panel-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--iron);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.card h2 {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  margin: 0 0 0.75rem;
+  color: var(--bronze);
+  font-weight: 500;
+}
+.card h3 { font-size: 0.95rem; color: var(--parchment-dim); margin: 1rem 0 0.4rem; }
+
+.armyName {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--iron);
+  color: var(--parchment);
+  font-family: var(--serif);
+  font-size: 1rem;
+  padding: 0.1rem 0.3rem;
+  width: 55%;
+}
+
+/* -------------------------------------------------------------------- */
+/* Regiments                                                            */
+/* -------------------------------------------------------------------- */
+.regiment-rows-head {
+  display: none;
+  grid-template-columns: 1.3fr 1.3fr 90px 1.1fr 28px;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  color: var(--parchment-dim);
+  padding: 0 0.1rem 0.2rem;
+}
+@media (min-width: 640px) { .regiment-rows-head { display: grid; } }
+.regiment-rows { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.5rem; }
+.regiment-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.3rem;
+  align-items: center;
+  font-size: 0.8rem;
+  border: 1px solid var(--iron);
+  border-radius: var(--radius);
+  padding: 0.4rem;
+}
+@media (min-width: 640px) {
+  .regiment-row { grid-template-columns: 1.3fr 1.3fr 90px 1.1fr 28px; border: none; padding: 0; }
+}
+.regiment-row input[type="text"],
+.regiment-row input[type="number"],
+.regiment-row select {
+  background: var(--field-dark);
+  border: 1px solid var(--iron);
+  color: var(--parchment);
+  padding: 0.3rem;
+  border-radius: var(--radius);
+  width: 100%;
+  font-family: var(--serif);
+  font-size: 0.78rem;
+}
+.regimentExpWrap { display: flex; align-items: center; gap: 0.3rem; }
+.regimentExpWrap input[type="range"] { flex: 1; }
+.regimentExpWrap output { width: 2.4em; font-size: 0.72rem; color: var(--parchment-dim); }
+.removeRegimentBtn {
+  background: transparent;
+  border: 1px solid var(--iron);
+  color: var(--rout-red);
+  padding: 0.2rem 0.4rem;
+  justify-self: end;
+}
+.addRegimentBtn { font-size: 0.78rem; padding: 0.35rem 0.6rem; margin-bottom: 0.5rem; }
+
+.commandSummary { margin-bottom: 0.75rem; }
+.warn { color: var(--shaken-amber); }
+
+.commandLimitField {
+  display: block;
+  margin: 0.6rem 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--parchment-dim);
+}
+.commandLimitField input {
+  display: block;
+  margin-top: 0.25rem;
+  width: 6rem;
+  background: var(--field-dark);
+  border: 1px solid var(--iron);
+  color: var(--parchment);
+  padding: 0.35rem;
+  border-radius: var(--radius);
+  font-family: var(--serif);
+}
+
+/* -------------------------------------------------------------------- */
+/* Unit Types editor                                                    */
+/* -------------------------------------------------------------------- */
+.unittype-list { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.75rem; }
+.unittype-row { border: 1px solid var(--iron); border-radius: var(--radius); padding: 0.6rem; }
+.unittype-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.unittype-head .utLabel {
+  flex: 1 1 12rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--iron);
+  color: var(--parchment);
+  font-family: var(--display);
+  font-size: 0.95rem;
+  padding: 0.15rem 0.2rem;
+}
+.unittype-head select {
+  background: var(--field-dark);
+  border: 1px solid var(--iron);
+  color: var(--parchment);
+  padding: 0.3rem;
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+}
+.unittype-head .deleteUnitTypeBtn { color: var(--rout-red); font-size: 0.75rem; padding: 0.3rem 0.5rem; }
+.unittype-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.35rem 0.75rem;
+}
+@media (min-width: 560px) { .unittype-stats { grid-template-columns: repeat(3, 1fr); } }
+.unittype-stats label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.68rem;
+  color: var(--parchment-dim);
+  gap: 0.15rem;
+}
+.unittype-stats input {
+  background: var(--field-dark);
+  border: 1px solid var(--iron);
+  color: var(--parchment);
+  padding: 0.25rem;
+  border-radius: var(--radius);
+  font-size: 0.76rem;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+@media (min-width: 560px) {
+  .field-grid { grid-template-columns: 1fr 1fr; }
+}
+.field-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--parchment-dim);
+}
+.field-grid input, .field-grid select {
+  background: var(--field-dark);
+  border: 1px solid var(--iron);
+  color: var(--parchment);
+  padding: 0.4rem;
+  border-radius: var(--radius);
+  font-family: var(--serif);
+}
+.hint { color: var(--parchment-dim); font-size: 0.75rem; font-style: italic; }
+
+.save-load-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  align-items: center;
+}
+.save-load-row input, .save-load-row select {
+  background: var(--field-dark);
+  border: 1px solid var(--iron);
+  color: var(--parchment);
+  padding: 0.35rem;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+}
+
+button {
+  background: var(--iron);
+  color: var(--parchment);
+  border: 1px solid #5c574f;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  font-family: var(--serif);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--bronze); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button.primary {
+  background: var(--bronze);
+  border-color: var(--bronze);
+  color: #1a1410;
+  font-weight: 600;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 0.75rem;
+  margin: 0.75rem 0;
+}
+.stat-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.72rem;
+  color: var(--parchment-dim);
+}
+.stat-grid input[type="range"] { width: 100%; }
+
+.trait-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+}
+@media (min-width: 500px) { .trait-grid { grid-template-columns: 1fr 1fr; } }
+.trait-chip {
+  border: 1px solid var(--iron);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.trait-chip.selected { border-color: var(--bronze); background: rgba(166,98,31,0.12); }
+.trait-chip .trait-name { color: var(--parchment); font-weight: 600; display: block; }
+.trait-chip .trait-desc { color: var(--parchment-dim); font-size: 0.72rem; }
+
+.battle-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+
+.turn-header {
+  font-family: var(--display);
+  color: var(--bronze);
+  font-size: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.side-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+  font-size: 0.8rem;
+}
+.side-stat-block {
+  border: 1px solid var(--iron);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+}
+.side-stat-block h4 { margin: 0 0 0.3rem; font-family: var(--display); font-size: 0.85rem; }
+.status-holding { color: var(--hold-green); }
+.status-shaken { color: var(--shaken-amber); }
+.status-routing, .status-retreating { color: var(--rout-red); }
+
+.regiment-list { margin-top: 0.4rem; border-top: 1px solid var(--iron); padding-top: 0.35rem; }
+.regiment-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--parchment-dim);
+  padding: 0.1rem 0;
+}
+.regiment-line span:first-child { color: var(--parchment); }
+
+.event-log {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+  border-left: 2px solid var(--bronze);
+  padding-left: 0.75rem;
+}
+.event-log div { margin-bottom: 0.3rem; color: var(--parchment); }
+
+.battle-report {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--iron);
+}
+.battle-report h3 { color: var(--bronze); }
+.report-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+@media (min-width: 560px) { .report-grid { grid-template-columns: 1fr 1fr; } }
+.report-side { border: 1px solid var(--iron); border-radius: var(--radius); padding: 0.6rem; font-size: 0.82rem; }
+.report-side dl { margin: 0; display: grid; grid-template-columns: auto auto; gap: 0.15rem 0.6rem; }
+.report-side dt { color: var(--parchment-dim); }
+.report-side dd { margin: 0; text-align: right; }
+
+.mono-block {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  background: var(--field-dark);
+  border: 1px solid var(--iron);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.error { color: var(--rout-red); font-size: 0.8rem; }

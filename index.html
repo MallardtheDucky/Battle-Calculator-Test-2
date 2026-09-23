@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Field of Arms: Nation RP Battle Calculator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <h1><span class="glyph">⚔</span> Field of Arms: Nation RP Battle Calculator</h1>
+  <p class="tagline">A turn-by-turn battle calculator for a Discord nation RP - regiments, veterancy, and a shared roster across every player's device</p>
+  <nav class="tabs" id="tabs">
+    <button data-tab="armies" class="tab-btn active">Armies</button>
+    <button data-tab="commanders" class="tab-btn">Commanders</button>
+    <button data-tab="unittypes" class="tab-btn">Unit Types</button>
+    <button data-tab="field" class="tab-btn">Battlefield</button>
+    <button data-tab="battle" class="tab-btn">Battle</button>
+    <button data-tab="calculator" class="tab-btn">Calculator</button>
+    <button data-tab="debug" class="tab-btn">Debug</button>
+  </nav>
+  <div class="sync-bar" id="syncBar">
+    <span class="sync-status local" id="syncStatusText">Starting up…</span>
+    <input type="text" id="roomCodeInput" placeholder="Room code" />
+    <button id="joinRoomBtn">Join room</button>
+    <button id="createRoomBtn">Create shared room</button>
+    <button id="leaveRoomBtn" class="hidden">Leave room</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ARMIES -->
+  <section id="tab-armies" class="tab-panel active">
+    <p class="hint tab-intro">Build each side out of named regiments. Each regiment tracks its own headcount and veterancy - surviving regiments come out of a battle more experienced, and can be saved back to the shared roster.</p>
+    <div class="panel-grid">
+      <div id="armyFormA"></div>
+      <div id="armyFormB"></div>
+    </div>
+  </section>
+
+  <!-- COMMANDERS -->
+  <section id="tab-commanders" class="tab-panel">
+    <div class="panel-grid">
+      <div id="commanderFormA"></div>
+      <div id="commanderFormB"></div>
+    </div>
+  </section>
+
+  <!-- UNIT TYPES -->
+  <section id="tab-unittypes" class="tab-panel">
+    <div class="card">
+      <h2>Unit Types</h2>
+      <p class="hint tab-intro">Every stat here is editable, including the built-in types - retune them to fit your server's setting, or add wholly unique units (war elephants, ballistae, whatever your RP needs). Changes are shared with everyone in your room.</p>
+      <div id="unitTypesList" class="unittype-list"></div>
+      <button id="addUnitTypeBtn" class="primary">+ Add Unique Unit Type</button>
+    </div>
+  </section>
+
+  <!-- BATTLEFIELD -->
+  <section id="tab-field" class="tab-panel">
+    <div class="card">
+      <h2>Battlefield Conditions</h2>
+      <div class="field-grid">
+        <label>Terrain
+          <select id="terrainSelect"></select>
+        </label>
+        <label>Weather
+          <select id="weatherSelect"></select>
+        </label>
+        <label>Attacker
+          <select id="attackerSideSelect"><option value="A">Army A</option><option value="B">Army B</option></select>
+        </label>
+        <label>Defender fortification (0–100)
+          <input type="range" id="fortificationRange" min="0" max="100" value="0" />
+          <output id="fortificationOut">0</output>
+        </label>
+        <label>Battle seed <span class="hint">(same seed + same setup = same battle)</span>
+          <input type="text" id="seedInput" placeholder="leave blank for random" />
+        </label>
+      </div>
+      <button id="goToBattleBtn" class="primary">Set Up Battle →</button>
+    </div>
+  </section>
+
+  <!-- BATTLE -->
+  <section id="tab-battle" class="tab-panel">
+    <div class="card battle-card">
+      <div class="battle-controls">
+        <button id="startBattleBtn" class="primary">Simulate Battle</button>
+        <button id="nextTurnBtn" disabled>Next Turn ▶</button>
+        <button id="playBtn" disabled>Auto-Play</button>
+        <button id="simulateAllBtn" disabled>Simulate All ⏭</button>
+        <button id="resetBattleBtn" disabled>Reset</button>
+      </div>
+      <div id="turnHeader" class="turn-header"></div>
+      <div id="sideStats" class="side-stats"></div>
+      <div id="eventLog" class="event-log"></div>
+      <div id="battleReport" class="battle-report hidden"></div>
+    </div>
+  </section>
+
+  <!-- CALCULATOR -->
+  <section id="tab-calculator" class="tab-panel">
+    <div class="card">
+      <h2>Calculator Mode</h2>
+      <p class="hint">Raw power numbers, per-turn deltas, and formula breakdowns for adjudicating an RP fight by hand.</p>
+      <div id="calculatorOutput" class="mono-block">Run a battle first - the breakdown appears here turn by turn.</div>
+    </div>
+  </section>
+
+  <!-- DEBUG -->
+  <section id="tab-debug" class="tab-panel">
+    <div class="card">
+      <h2>Debug Mode</h2>
+      <p class="hint">Full internal state, raw engine output, and JSON export for bug reports.</p>
+      <div class="battle-controls">
+        <button id="copyDebugBtn">Copy JSON</button>
+        <button id="copyDiscordBtn">Copy Discord-formatted report</button>
+      </div>
+      <pre id="debugOutput" class="mono-block">No battle run yet.</pre>
+    </div>
+  </section>
+
+</main>
+
+<template id="armyFormTemplate">
+  <div class="card army-form">
+    <h2>Army <span class="side-letter"></span> <input type="text" class="armyName" placeholder="Army name" /></h2>
+    <div class="regiment-rows-head">
+      <span>Regiment</span><span>Unit Type</span><span>Headcount</span><span>Veterancy</span><span></span>
+    </div>
+    <div class="regiment-rows"></div>
+    <button type="button" class="addRegimentBtn">+ Add Regiment</button>
+    <div class="commandSummary hint"></div>
+    <div class="field-grid">
+      <label>Quality (0–100) <span class="hint">(training &amp; equipment baseline)</span><input type="range" class="quality" min="0" max="100" value="55" /><output></output></label>
+      <label>Morale (0–100)<input type="range" class="morale" min="0" max="100" value="72" /><output></output></label>
+      <label>Supply (0–100)<input type="range" class="supply" min="0" max="100" value="80" /><output></output></label>
+      <label>Opening Stance <span class="hint">(commander adapts from here as the fight develops)</span>
+        <select class="formation"></select>
+      </label>
+    </div>
+    <div class="save-load-row">
+      <input type="text" class="slotName" placeholder="Save to shared roster as…" />
+      <button class="saveArmyBtn">Save</button>
+      <select class="loadArmySelect"><option value="">Load from shared roster…</option></select>
+      <button class="loadArmyBtn">Load</button>
+      <button class="deleteArmyBtn">Delete</button>
+    </div>
+  </div>
+</template>
+
+<template id="commanderFormTemplate">
+  <div class="card commander-form">
+    <h2>Commander for Army <span class="side-letter"></span></h2>
+    <input type="text" class="cmdName" placeholder="Commander name" />
+    <label class="commandLimitField">Command Limit <span class="hint">(regiments this commander can lead before coordination suffers)</span>
+      <input type="number" class="cmdLimit" min="1" max="40" value="10" />
+    </label>
+    <div class="stat-grid"></div>
+    <h3>Traits <span class="hint">(pick up to 3)</span></h3>
+    <div class="trait-grid"></div>
+  </div>
+</template>
+
+<script type="module" src="js/ui.js"></script>
+</body>
+</html>
